@@ -30,6 +30,7 @@ dependencies:
   flutter:
     sdk: flutter
   simple_animations: ^4.0.1
+  tflite: ^1.1.1
   camera:
   path_provider:
   path:
@@ -64,6 +65,7 @@ flutter:
   # the material Icons class.
   uses-material-design: true
   assets:
+    - assets/
     - assets/background.png
     - assets/illustration.png
 

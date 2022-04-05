@@ -25,7 +25,7 @@ class HomeScreen extends StatelessWidget{
           body: TabBarView(
             children: [
               Container(child: Section()),
-              Container(child: CameraAccess()),
+              Container(child: Home()),
               Container(child: ProfilePage()),
             ],
           ),
