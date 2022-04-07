@@ -31,6 +31,8 @@ dependencies:
     sdk: flutter
   simple_animations: ^4.0.1
   tflite: ^1.1.1
+  http: ^0.13.0
+  provider: ^4.0.4
   camera:
   path_provider:
   path:

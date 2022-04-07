@@ -1,180 +1,186 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:tflite/tflite.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:tflite/tflite.dart';
 
-class Home extends StatefulWidget {
+class StaticImage extends StatefulWidget {
+
   @override
-  _HomeState createState() => _HomeState();
+  _StaticImageState createState() => _StaticImageState();
 }
 
-class _HomeState extends State<Home> {
-  bool _loading = true;
-  late File _image;
-  late List _output;
-  final picker = ImagePicker(); //allows us to pick image from gallery or camera
+class _StaticImageState extends State<StaticImage> {
+  File _image=File("");
+  List _recognitions=[];
+  late bool _busy;
+  double _imageWidth=100.0, _imageHeight=100.0;
+
+  final picker = ImagePicker();
+
+  // this function loads the model
+  loadTfModel() async {
+    await Tflite.loadModel(
+      model: "assets/ssd_mobilenet.tflite",
+      labels: "assets/labels.txt",
+    );
+  }
+
+  // this function detects the objects on the image
+  detectObject(File image) async {
+    var recognitions = await Tflite.detectObjectOnImage(
+        path: image.path,       // required
+        model: "SSDMobileNet",
+        imageMean: 127.5,
+        imageStd: 127.5,
+        threshold: 0.4,       // defaults to 0.1
+        numResultsPerClass: 10,// defaults to 5
+        asynch: true          // defaults to true
+    );
+    FileImage(image)
+        .resolve(ImageConfiguration())
+        .addListener((ImageStreamListener((ImageInfo info, bool _) {
+      setState(() {
+        _imageWidth = info.image.width.toDouble();
+        _imageHeight = info.image.height.toDouble();
+      });
+    })));
+    setState(() {
+      _recognitions = recognitions as List;
+    });
+  }
 
   @override
   void initState() {
-    //initS is the first function that is executed by default when this class is called
     super.initState();
-    loadModel().then((value) {
-      setState(() {});
-    });
+    _busy = true;
+    loadTfModel().then((val) {{
+      setState(() {
+        _busy = false;
+      });
+    }});
   }
+  // display the bounding boxes over the detected objects
+  List<Widget> renderBoxes(Size screen) {
+    if (_recognitions == null) return [];
+    if (_imageWidth == null || _imageHeight == null) return [];
 
-  @override
-  void dispose() {
-    //dis function disposes and clears our memory
-    super.dispose();
-    Tflite.close();
-  }
+    double factorX = screen.width;
+    double factorY = _imageHeight / _imageHeight * screen.width;
 
-  classifyImage(File image) async {
-    //this function runs the model on the image
-    var output = await Tflite.runModelOnImage(
-      path: image.path,
-      numResults: 36, //the amout of categories our neural network can predict
-      threshold: 0.5,
-      imageMean: 127.5,
-      imageStd: 127.5,
-    );
-    setState(() {
-      _output = output as List;
-      _loading = false;
-    });
-  }
+    Color blue = Colors.blue;
 
-  loadModel() async {
-    //this function loads our model
-    await Tflite.loadModel(
-        model: 'assets/model.tflite', labels: 'assets/labels.txt');
-  }
-
-  pickImage() async {
-    //this function to grab the image from camera
-    var image = await picker.pickImage(source: ImageSource.camera);
-    if (image == null) return null;
-
-    setState(() {
-      _image = File(image.path);
-    });
-    classifyImage(_image);
-  }
-
-  pickGalleryImage() async {
-    //this function to grab the image from gallery
-    var image = await picker.pickImage(source: ImageSource.gallery);
-    if (image == null) return null;
-
-    setState(() {
-      _image = File(image.path);
-    });
-    classifyImage(_image);
+    return _recognitions.map((re) {
+      return Container(
+        child: Positioned(
+            left: re["rect"]["x"] * factorX,
+            top: re["rect"]["y"] * factorY,
+            width: re["rect"]["w"] * factorX,
+            height: re["rect"]["h"] * factorY,
+            child: ((re["confidenceInClass"] > 0.50))? Container(
+              decoration: BoxDecoration(
+                  border: Border.all(
+                    color: blue,
+                    width: 3,
+                  )
+              ),
+              child: Text(
+                "${re["detectedClass"]} ${(re["confidenceInClass"] * 100).toStringAsFixed(0)}%",
+                style: TextStyle(
+                  background: Paint()..color = blue,
+                  color: Colors.white,
+                  fontSize: 15,
+                ),
+              ),
+            ) : Container()
+        ),
+      );
+    }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
+    Size size = MediaQuery.of(context).size;
+
+    List<Widget> stackChildren = [];
+
+    stackChildren.add(
+        Positioned(
+          // using ternary operator
+          child: _image == File("") ?
+          Container(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Text("Please Select an Image"),
+              ],
+            ),
+          )
+              : // if not null then
+          Container(
+              child:Image.file(_image)
+          ),
+        )
+    );
+
+    stackChildren.addAll(renderBoxes(size));
+
+    if (_busy) {
+      stackChildren.add(
+          Center(
+            child: CircularProgressIndicator(),
+          )
+      );
+    }
+
     return Scaffold(
 
+      floatingActionButton: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: <Widget>[
+          FloatingActionButton(
+            heroTag: "Fltbtn2",
+            child: Icon(Icons.camera_alt),
+            onPressed: getImageFromCamera,
+          ),
+          SizedBox(width: 10,),
+          FloatingActionButton(
+            heroTag: "Fltbtn1",
+            child: Icon(Icons.photo),
+            onPressed: getImageFromGallery,
+          ),
+        ],
+      ),
       body: Container(
-        color: Colors.black.withOpacity(0.9),
-        padding: EdgeInsets.symmetric(horizontal: 35, vertical: 50),
-        child: Container(
-          alignment: Alignment.center,
-          padding: EdgeInsets.all(30),
-          decoration: BoxDecoration(
-            color: Color(0xFF2A363B),
-            borderRadius: BorderRadius.circular(30),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                child: Center(
-                  child: _loading == true
-                      ? null //show nothing if no picture selected
-                      : Container(
-                    child: Column(
-                      children: [
-                        Container(
-                          height: 250,
-                          width: 250,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(30),
-                            child: Image.file(
-                              _image,
-                              fit: BoxFit.fill,
-                            ),
-                          ),
-                        ),
-                        Divider(
-                          height: 25,
-                          thickness: 1,
-                        ),
-                        _output != null
-                            ? Text(
-                          'The object is: ${_output[0]['label']}!',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w400),
-                        )
-                            : Container(),
-                        Divider(
-                          height: 25,
-                          thickness: 1,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Container(
-                child: Column(
-                  children: [
-                    GestureDetector(
-                      onTap: pickImage,
-                      child: Container(
-                        width: MediaQuery.of(context).size.width - 200,
-                        alignment: Alignment.center,
-                        padding:
-                        EdgeInsets.symmetric(horizontal: 24, vertical: 17),
-                        decoration: BoxDecoration(
-                            color: Colors.blueGrey[600],
-                            borderRadius: BorderRadius.circular(15)),
-                        child: Text(
-                          'Take A Photo',
-                          style: TextStyle(color: Colors.white, fontSize: 16),
-                        ),
-                      ),
-                    ),
-                    SizedBox(
-                      height: 30,
-                    ),
-                    GestureDetector(
-                      onTap: pickGalleryImage,
-                      child: Container(
-                        width: MediaQuery.of(context).size.width - 200,
-                        alignment: Alignment.center,
-                        padding:
-                        EdgeInsets.symmetric(horizontal: 24, vertical: 17),
-                        decoration: BoxDecoration(
-                            color: Colors.blueGrey[600],
-                            borderRadius: BorderRadius.circular(15)),
-                        child: Text(
-                          'Pick From Gallery',
-                          style: TextStyle(color: Colors.white, fontSize: 16),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+        alignment: Alignment.center,
+        child:Stack(
+          children: stackChildren,
         ),
       ),
     );
+  }
+  // gets image from camera and runs detectObject
+  Future getImageFromCamera() async {
+    final pickedFile = await picker.getImage(source: ImageSource.camera);
+
+    setState(() {
+      if(pickedFile != null) {
+        _image = File(pickedFile.path);
+      } else {
+        print("No image Selected");
+      }
+    });
+    detectObject(_image);
+  }
+  // gets image from gallery and runs detectObject
+  Future getImageFromGallery() async {
+    final pickedFile = await picker.getImage(source: ImageSource.gallery);
+    setState(() {
+      if(pickedFile != null) {
+        _image = File(pickedFile.path);
+      } else {
+        print("No image Selected");
+      }
+    });
+    detectObject(_image);
   }
 }

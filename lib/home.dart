@@ -7,6 +7,7 @@ import '../pages/profile_page.dart';
 class HomeScreen extends StatelessWidget{
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       home: DefaultTabController(
         length: 3,
         child: Scaffold(
@@ -25,7 +26,7 @@ class HomeScreen extends StatelessWidget{
           body: TabBarView(
             children: [
               Container(child: Section()),
-              Container(child: Home()),
+              Container(child: StaticImage()),
               Container(child: ProfilePage()),
             ],
           ),
