@@ -51,11 +51,12 @@ class EditNameFormPageState extends State<EditNameFormPage> {
             children: <Widget>[
               SizedBox(
                   width: 330,
-                  child: const Text(
+                  child:  Text(
                     "What's Your Name?",
                     style: TextStyle(
                       fontSize: 25,
                       fontWeight: FontWeight.bold,
+                      color: Colors.black
                     ),
                   )),
               Row(
@@ -78,7 +79,7 @@ class EditNameFormPageState extends State<EditNameFormPage> {
                               return null;
                             },
                             decoration:
-                                InputDecoration(labelText: 'First Name'),
+                                InputDecoration(labelText: 'First Name',fillColor: Colors.black),
                             controller: firstNameController,
                           ))),
                   Padding(

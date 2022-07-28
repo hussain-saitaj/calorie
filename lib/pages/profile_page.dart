@@ -1,11 +1,13 @@
 import 'dart:async';
 
+import 'package:first1/login_screen.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'edit_password.dart';
 import 'edit_email.dart';
 import 'edit_name.dart';
 import 'edit_phone.dart';
+import 'package:first1/models/authentication.dart';
 import '../login.dart';
 
 import '../user/user_data.dart';
@@ -16,19 +18,16 @@ class ProfilePage extends StatefulWidget {
   _ProfilePageState createState() => _ProfilePageState();
 }
 
+
 class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     final user = UserData.myUser;
 
+
     return Scaffold(
       body: Column(
         children: [
-          AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            toolbarHeight: 10,
-          ),
           Center(
               child: Padding(
                   padding: EdgeInsets.only(bottom: 20),
@@ -37,20 +36,26 @@ class _ProfilePageState extends State<ProfilePage> {
                     style: TextStyle(
                       fontSize: 30,
                       fontWeight: FontWeight.w700,
-                      color: Color.fromRGBO(64, 105, 225, 1),
+                      color: Colors.black,
                     ),
                   ))),
 
           buildUserInfoDisplay(user.name, 'Name', EditNameFormPage()),
           buildUserInfoDisplay(user.phone, 'Phone', EditPhoneFormPage()),
           buildUserInfoDisplay(user.email, 'Email', EditEmailFormPage()),
+          //buildUserInfoDisplay(user.phone, 'Phone', EditPhoneFormPage()),
+
+          SizedBox(height: 20,),
+
           MaterialButton(
             minWidth: 300,
             height: 60,
+            color: Colors.pink[700],
             onPressed: () {
               navigateSecondPage(EditPasswordFormPage());
             },
             shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(18.0),
                 side: BorderSide(
                     color: Colors.black
                 ),
@@ -58,17 +63,20 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             child: Text("Reset Password", style: TextStyle(
                 fontWeight: FontWeight.w600,
-                fontSize: 18
+                fontSize: 18,color: Colors.white,
             ),),
           ),
-          SizedBox( height: 10,),
+          SizedBox( height: 20,),
           MaterialButton(
             minWidth: 300,
             height: 60,
+            color: Colors.pink[700],
             onPressed: () {
-              navigateSecondPage(LoginPage());
+              Navigator.pop(context);
+              navigateSecondPage(LoginScreen());
             },
             shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18.0),
               side: BorderSide(
                   color: Colors.black
               ),
@@ -76,7 +84,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             child: Text("Logout", style: TextStyle(
                 fontWeight: FontWeight.w600,
-                fontSize: 18
+                fontSize: 18,color: Colors.white,
             ),),
           )
         ],
@@ -96,7 +104,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
-                  color: Colors.grey,
+                  color: Colors.black,
                 ),
               ),
               SizedBox(
@@ -108,7 +116,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   decoration: BoxDecoration(
                       border: Border(
                           bottom: BorderSide(
-                    color: Colors.grey,
+                    color: Colors.black,
                     width: 1,
                   ))),
                   child: Row(children: [

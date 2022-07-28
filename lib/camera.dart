@@ -1,8 +1,36 @@
+//var calories={'apple':'95','banana':'105','orange':'60','grape':'120','carrot':'','watermelon':'70'};
+
 import 'dart:io';
+import 'dart:math';
+import 'global.dart' as globals;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:tflite/tflite.dart';
 
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+Future<void> updateCalorie(int cal) async {
+  var date = new DateTime.now().toString();
+  var dateParse = DateTime.parse(date);
+  var formattedDate = "${dateParse.day}-${dateParse.month}-${dateParse.year}";
+  await Firebase.initializeApp();
+  var collection = FirebaseFirestore.instance.collection('dailyCalorie');
+  var docSnapshot = await collection.doc(formattedDate).get();
+  //FirebaseFirestore.instance.collection('dailyCalorie').doc(formattedDate).snapshots(),
+  if (!docSnapshot.exists) {
+    FirebaseFirestore.instance.collection("dailyCalorie").doc(formattedDate).set({
+      'calorie' :cal
+    });
+  }
+  else {
+    Map<String, dynamic>? data = docSnapshot.data();
+    var total=data?['calorie']+cal;
+    FirebaseFirestore.instance.collection("dailyCalorie").doc(formattedDate).update({
+      'calorie' :total
+    });
+  }
+}
 class StaticImage extends StatefulWidget {
 
   @override
@@ -10,7 +38,8 @@ class StaticImage extends StatefulWidget {
 }
 
 class _StaticImageState extends State<StaticImage> {
-  File _image=File("");
+  File _image=File("C:/Users/TAJ/Desktop/flutter/first1/assets/background.png");
+  var im=0;
   List _recognitions=[];
   late bool _busy;
   double _imageWidth=100.0, _imageHeight=100.0;
@@ -24,6 +53,7 @@ class _StaticImageState extends State<StaticImage> {
       labels: "assets/labels.txt",
     );
   }
+
 
   // this function detects the objects on the image
   detectObject(File image) async {
@@ -47,6 +77,58 @@ class _StaticImageState extends State<StaticImage> {
     setState(() {
       _recognitions = recognitions as List;
     });
+    // showDialog(
+    //   context: context,
+    //   builder: (context) {
+    //     String contentText = "Content of Dialog";
+    //     return StatefulBuilder(
+    //       builder: (context, setState) {
+    //         return AlertDialog(
+    //           title: Text("Title of Dialog"),
+    //           content: Text(contentText),
+    //           actions: <Widget>[
+    //             TextButton(
+    //               onPressed: () => Navigator.pop(context),
+    //               child: Text("Cancel"),
+    //             ),
+    //             TextButton(
+    //               onPressed: () {
+    //                 setState(() {
+    //                   contentText = "Changed Content of Dialog";
+    //                 });
+    //               },
+    //               child: Text("Change"),
+    //             ),
+    //           ],
+    //         );
+    //       },
+    //     );
+    //   },
+    // );
+
+    var calories1={'apple':52,'banana':89,'orange':47,'grape':67,'carrot':41,'watermelon':30};
+    var mp=await _recognitions[0];
+    var val=calories1[mp["detectedClass"]] as int;
+    var res= val - Random().nextInt(10);
+    globals.totalCalorie+=res;
+    showDialog<String>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: Text("The detected Fruit is ${mp["detectedClass"]}"),
+        content: Text('No of Calories contained is ${res}\n\nPress Ok to add them to your calorie count'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: ( ){
+              updateCalorie(calories1[mp["detectedClass"]] as int);
+              Navigator.pop(context, 'OK');},
+            child: const Text('OK',
+                style: TextStyle(color: Color(0xff7c064f), fontSize: 16.0)),
+          ),
+        ],
+        titleTextStyle:
+        const TextStyle(color: Color(0xff7c064f), fontSize: 20.0),
+      ),
+    );
   }
 
   @override
@@ -59,6 +141,8 @@ class _StaticImageState extends State<StaticImage> {
       });
     }});
   }
+
+
   // display the bounding boxes over the detected objects
   List<Widget> renderBoxes(Size screen) {
     if (_recognitions == null) return [];
@@ -67,16 +151,22 @@ class _StaticImageState extends State<StaticImage> {
     double factorX = screen.width;
     double factorY = _imageHeight / _imageHeight * screen.width;
 
+    var calories={'apple':'95','banana':'105','orange':'60','grape':'120','carrot':'41','watermelon':'70'};
+    //var calories1={'apple':95,'banana':105,'orange':60,'grape':120,'carrot':41,'watermelon':70};
+
     Color blue = Colors.blue;
 
+    //var val=calories1[mp["detectedClass"]] as int;
+    //var res= val - Random().nextInt(20);
     return _recognitions.map((re) {
+
       return Container(
         child: Positioned(
             left: re["rect"]["x"] * factorX,
             top: re["rect"]["y"] * factorY,
             width: re["rect"]["w"] * factorX,
             height: re["rect"]["h"] * factorY,
-            child: ((re["confidenceInClass"] > 0.50))? Container(
+            child: ((re["confidenceInClass"] > 0.50) && calories.containsKey(re["detectedClass"]) )? Container(
               decoration: BoxDecoration(
                   border: Border.all(
                     color: blue,
@@ -84,7 +174,7 @@ class _StaticImageState extends State<StaticImage> {
                   )
               ),
               child: Text(
-                "${re["detectedClass"]} ${(re["confidenceInClass"] * 100).toStringAsFixed(0)}%",
+                "${re["detectedClass"]}",
                 style: TextStyle(
                   background: Paint()..color = blue,
                   color: Colors.white,
@@ -97,6 +187,9 @@ class _StaticImageState extends State<StaticImage> {
     }).toList();
   }
 
+
+
+
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
@@ -106,7 +199,7 @@ class _StaticImageState extends State<StaticImage> {
     stackChildren.add(
         Positioned(
           // using ternary operator
-          child: _image == File("") ?
+          child: im==0 ?
           Container(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -139,12 +232,15 @@ class _StaticImageState extends State<StaticImage> {
         children: <Widget>[
           FloatingActionButton(
             heroTag: "Fltbtn2",
+
             child: Icon(Icons.camera_alt),
+            backgroundColor: Colors.pink[700],
             onPressed: getImageFromCamera,
           ),
           SizedBox(width: 10,),
           FloatingActionButton(
             heroTag: "Fltbtn1",
+            backgroundColor: Colors.pink[700],
             child: Icon(Icons.photo),
             onPressed: getImageFromGallery,
           ),
@@ -158,6 +254,8 @@ class _StaticImageState extends State<StaticImage> {
       ),
     );
   }
+
+
   // gets image from camera and runs detectObject
   Future getImageFromCamera() async {
     final pickedFile = await picker.getImage(source: ImageSource.camera);
@@ -165,22 +263,31 @@ class _StaticImageState extends State<StaticImage> {
     setState(() {
       if(pickedFile != null) {
         _image = File(pickedFile.path);
+        im=1;
       } else {
         print("No image Selected");
       }
     });
     detectObject(_image);
   }
+
+
+
   // gets image from gallery and runs detectObject
   Future getImageFromGallery() async {
+    //var calories={'apple':'95','banana':'105','orange':'60','grape':'120','carrot':'45','watermelon':'70'};
     final pickedFile = await picker.getImage(source: ImageSource.gallery);
     setState(() {
       if(pickedFile != null) {
         _image = File(pickedFile.path);
+        im=1;
       } else {
         print("No image Selected");
       }
     });
+
     detectObject(_image);
+
   }
 }
+
